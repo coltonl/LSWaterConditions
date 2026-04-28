@@ -1,0 +1,18 @@
+{
+  "name": "ls-conditions-app",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Lake Stevens water-ski conditions: hourly Open-Meteo forecast + Claude-generated outlook, served from Azure Static Web Apps.",
+  "scripts": {
+    "fetch": "node scripts/fetch-forecast.mjs",
+    "dev": "npm --prefix frontend run dev",
+    "build": "npm --prefix frontend run build"
+  },
+  "dependencies": {
+    "@azure/storage-blob": "^12.24.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -1,0 +1,191 @@
+/* App-wide layout + component styles. All colors / sizes come from tokens.css. */
+
+.app {
+  min-height: 100vh;
+  position: relative;
+}
+.app__noise {
+  position: fixed; inset: 0; pointer-events: none;
+  background-image: repeating-linear-gradient(
+    0deg, transparent, transparent 2px,
+    rgba(255, 255, 255, 0.012) 2px, rgba(255, 255, 255, 0.012) 4px
+  );
+}
+.app__inner {
+  position: relative; z-index: 1;
+  max-width: 680px; margin: 0 auto;
+  padding: var(--space-4) var(--space-3) 48px;
+}
+
+/* ---------- header ---------- */
+.header { text-align: center; margin-bottom: var(--space-4); }
+.header__eyebrow {
+  font-family: var(--font-ui);
+  font-size: 13px; letter-spacing: 0.25em; text-transform: uppercase;
+  color: var(--text-faint); margin-bottom: 8px;
+}
+.header__title {
+  margin: 0;
+  font-size: clamp(28px, 6vw, 42px);
+  font-weight: 400; letter-spacing: -0.02em;
+  text-shadow: 0 0 40px rgba(91, 168, 196, 0.3);
+}
+.header__sub {
+  margin-top: 6px;
+  font-family: var(--font-ui); font-size: 14px; color: var(--text-dim);
+}
+
+/* ---------- loading / error ---------- */
+.state-loading {
+  text-align: center; padding: 60px 0; color: var(--text-faint);
+  font-family: var(--font-ui);
+}
+.state-loading__icon {
+  font-size: 32px; margin-bottom: var(--space-2);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+.state-loading__msg { font-size: 14px; }
+
+.state-error {
+  text-align: center; padding: var(--space-4);
+  background: var(--error-bg); border-radius: var(--radius-row);
+  color: var(--error-fg); font-family: var(--font-ui);
+}
+.state-error__msg { margin-bottom: var(--space-2); font-size: 13px; }
+.state-error__retry {
+  background: var(--button-bg); border: none; color: var(--text-primary);
+  padding: 8px 20px; border-radius: var(--radius-pill); cursor: pointer;
+}
+
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+
+/* ---------- NowCard ---------- */
+.now {
+  border-radius: var(--radius-card);
+  border: 1px solid var(--border-card);
+  background:
+    linear-gradient(135deg, var(--now-tint, transparent) 0%, var(--surface-card) 100%);
+  padding: 24px 28px; margin-bottom: 28px;
+}
+.now__top {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  flex-wrap: wrap; gap: var(--space-2);
+}
+.now__eyebrow {
+  font-family: var(--font-ui); font-size: 11px;
+  letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--text-faint); margin-bottom: var(--space-1);
+}
+.now__icon { font-size: 44px; margin-bottom: 4px; }
+.now__rating {
+  font-family: var(--font-ui); font-size: 26px; font-weight: 600;
+  color: var(--rating, var(--text-primary));
+}
+.now__condition {
+  font-family: var(--font-ui); font-size: 13px; color: var(--text-muted);
+  margin-top: 4px;
+}
+.now__stats { font-family: var(--font-ui); text-align: right; }
+.now__stat { margin-bottom: var(--space-1); }
+.now__stat-label {
+  font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--text-fade);
+}
+.now__stat-value { font-size: 15px; font-weight: 600; color: var(--text-primary); }
+
+.now__outlook {
+  margin-top: var(--space-3); padding-top: 18px;
+  border-top: 1px solid var(--border-card);
+}
+.now__outlook-eyebrow {
+  font-family: var(--font-ui); font-size: 11px;
+  letter-spacing: 0.15em; text-transform: uppercase;
+  color: var(--text-faint); margin-bottom: var(--space-1);
+}
+.now__outlook-text {
+  font-size: 14px; line-height: 1.7; color: var(--text-body);
+}
+
+/* ---------- DayTabs ---------- */
+.day-tabs {
+  display: flex; gap: 8px; margin-bottom: var(--space-3);
+}
+.day-tabs__btn {
+  flex: 1; padding: 10px;
+  border: none; border-radius: var(--radius-row); cursor: pointer;
+  font-family: var(--font-ui); font-size: 13px; font-weight: 600;
+  background: var(--surface-row); color: var(--text-faint-2);
+  transition: all 0.2s;
+}
+.day-tabs__btn--active {
+  background: #1a5a7a; color: var(--text-primary);
+  box-shadow: 0 2px 12px rgba(26, 90, 122, 0.4);
+}
+
+/* ---------- HourRow list ---------- */
+.hours { display: flex; flex-direction: column; gap: 6px; }
+.hour {
+  display: grid; grid-template-columns: 76px 1fr auto auto;
+  align-items: center; gap: var(--space-2);
+  padding: 11px 16px;
+  border-radius: var(--radius-row);
+  cursor: pointer; transition: all 0.15s;
+  background: var(--surface-row);
+  border: 1px solid transparent;
+}
+.hour--past { opacity: 0.4; background: rgba(255,255,255,0.02); }
+.hour--current {
+  background: var(--surface-row-hi);
+  border-color: var(--border-current);
+}
+.hour--expanded { background: var(--surface-row-sel); }
+.hour__time {
+  font-family: var(--font-ui); font-size: 13px; color: var(--text-faint-2);
+}
+.hour--current .hour__time { color: #7acce0; font-weight: 700; }
+.hour__rating {
+  display: flex; align-items: center; gap: 8px;
+  font-family: var(--font-ui); font-size: 13px; font-weight: 600;
+  color: var(--rating, var(--text-primary));
+}
+.hour__dot {
+  width: 9px; height: 9px; border-radius: 50%;
+  background: var(--rating, var(--text-faint));
+  box-shadow: 0 0 5px var(--rating, transparent);
+  flex-shrink: 0;
+}
+.hour__condition {
+  font-family: var(--font-ui); font-size: 11px; color: var(--text-fade);
+  margin-left: 4px;
+}
+.hour__wind, .hour__gust {
+  font-family: var(--font-ui); white-space: nowrap;
+}
+.hour__wind { font-size: 12px; color: #5a8898; }
+.hour__gust { font-size: 11px; color: #4a7a88; }
+
+/* ---------- Legend + footer ---------- */
+.legend {
+  margin-top: 28px;
+  display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;
+  font-family: var(--font-ui); font-size: 12px;
+}
+.legend__item { display: flex; align-items: center; gap: 5px; }
+.legend__dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--rating);
+}
+.legend__label { color: var(--rating); }
+.legend__note  { color: var(--text-fade); }
+
+.footer {
+  text-align: center; margin-top: var(--space-3);
+  font-family: var(--font-ui); font-size: 11px; color: #3a6a7a;
+}
+.footer__refresh {
+  margin-top: 8px;
+  background: none; border: 1px solid var(--button-bg);
+  color: var(--text-faint);
+  padding: 5px 14px; border-radius: 6px;
+  cursor: pointer; font-size: 11px;
+}
