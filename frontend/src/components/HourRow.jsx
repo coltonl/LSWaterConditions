@@ -11,6 +11,7 @@ export default function HourRow({ hour, isCurrent, isPast }) {
   return (
     <div className={className} style={{ "--rating": meta.color }}>
       <span className="hour__time">{formatHour(hour.isoTime)}</span>
+      <span className="hour__temp">{hour.tempF}°</span>
       <span className="hour__rating">
         <span className="hour__dot" />
         {hour.skiRating}

@@ -85,6 +85,8 @@ export default function App() {
               hour={currentHour}
               summary={data.summary}
               fetchedAt={data.fetchedAt}
+              motd={data.motd}
+              launchQuip={data.launchQuip}
             />
 
             <DayTabs days={days} active={activeDay} onChange={setDayFilter} />

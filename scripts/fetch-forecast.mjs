@@ -13,6 +13,7 @@ const CONTAINER = "forecast";
 const BLOB_NAME = "current-forecast.json";
 const HOURS_AHEAD = 36;
 const SUMMARY_HOURS = 12;
+const CLAUDE_MODEL = "claude-haiku-4-5-20251001";
 
 // ---------- Open-Meteo ----------
 
@@ -20,9 +21,9 @@ async function fetchOpenMeteo() {
   const url = new URL("https://api.open-meteo.com/v1/forecast");
   url.searchParams.set("latitude",  String(LAT));
   url.searchParams.set("longitude", String(LON));
-  // wind_gusts_10m — confirmed correct field name (handoff doc had this wrong).
-  url.searchParams.set("hourly", "wind_speed_10m,wind_gusts_10m,precipitation,weather_code");
+  url.searchParams.set("hourly", "wind_speed_10m,wind_gusts_10m,precipitation,weather_code,temperature_2m,apparent_temperature,relative_humidity_2m");
   url.searchParams.set("wind_speed_unit", "mph");
+  url.searchParams.set("temperature_unit", "fahrenheit");
   url.searchParams.set("forecast_days", "3");
   url.searchParams.set("timezone", TZ);
 
@@ -51,7 +52,7 @@ function wmoToCondition(code) {
   return "Unknown";
 }
 
-// ---------- Ski rating (handoff's logic, with weather_code precedence) ----------
+// ---------- Ski rating ----------
 
 function getSkiRating(windMph, gustMph, precipMm, weatherCode) {
   if (weatherCode >= 95) return "Dangerous";
@@ -62,7 +63,7 @@ function getSkiRating(windMph, gustMph, precipMm, weatherCode) {
   return "Excellent";
 }
 
-// ---------- Time helpers (Pacific-local "YYYY-MM-DDTHH:00") ----------
+// ---------- Time helpers ----------
 
 function currentPacificHour() {
   const parts = new Intl.DateTimeFormat("en-US", {
@@ -76,10 +77,15 @@ function currentPacificHour() {
   return `${get("year")}-${get("month")}-${get("day")}T${hh}:00`;
 }
 
+function currentPacificDate() {
+  return currentPacificHour().slice(0, 10); // "YYYY-MM-DD"
+}
+
 // ---------- Build per-hour rows ----------
 
 function buildHours(om) {
-  const { time, wind_speed_10m, wind_gusts_10m, precipitation, weather_code } = om.hourly;
+  const { time, wind_speed_10m, wind_gusts_10m, precipitation, weather_code,
+          temperature_2m, apparent_temperature, relative_humidity_2m } = om.hourly;
 
   if (![wind_speed_10m, wind_gusts_10m, precipitation, weather_code].every(Array.isArray)) {
     throw new Error("Open-Meteo response missing expected hourly arrays");
@@ -97,12 +103,15 @@ function buildHours(om) {
     const gust  = round1(wind_gusts_10m[i]);
     const precip = round2(precipitation[i]);
     out.push({
-      isoTime:  time[i],
-      windMph:  wind,
-      gustMph:  gust,
-      precipMm: precip,
-      condition: wmoToCondition(code),
-      skiRating: getSkiRating(wind, gust, precip, code),
+      isoTime:    time[i],
+      windMph:    wind,
+      gustMph:    gust,
+      precipMm:   precip,
+      tempF:      round1(temperature_2m[i]),
+      feelsLikeF: round1(apparent_temperature[i]),
+      humidity:   Math.round(relative_humidity_2m[i]),
+      condition:  wmoToCondition(code),
+      skiRating:  getSkiRating(wind, gust, precip, code),
     });
   }
   return out;
@@ -111,30 +120,12 @@ function buildHours(om) {
 const round1 = (n) => Math.round(n * 10) / 10;
 const round2 = (n) => Math.round(n * 100) / 100;
 
-// ---------- Claude outlook summary ----------
+// ---------- Claude helpers ----------
 
-async function callClaude(hours) {
-  const snippet = hours
-    .slice(0, SUMMARY_HOURS)
-    .map((h) => `${h.isoTime.slice(11)} — wind ${h.windMph} mph, gusts ${h.gustMph} mph, ${h.condition} (${h.skiRating})`)
-    .join("\n");
-
-  const body = {
-    model: "claude-haiku-4-5-20251001",
-    max_tokens: 300,
-    messages: [{
-      role: "user",
-      content:
-        "You are a local expert on Lake Stevens, Washington water ski conditions. " +
-        "Given this hourly forecast for the next 12 hours, write a 2-3 sentence plain-English outlook. " +
-        "Mention the best windows for skiing and any warnings. Be direct, like a local would talk. " +
-        "Do not include preamble or markdown — just the prose summary.\n\n" +
-        `Forecast:\n${snippet}`,
-    }],
-  };
-
+async function claudeCall(messages, maxTokens = 300) {
+  const body = { model: CLAUDE_MODEL, max_tokens: maxTokens, messages };
   const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method:  "POST",
+    method: "POST",
     headers: {
       "Content-Type":      "application/json",
       "x-api-key":         process.env.ANTHROPIC_API_KEY,
@@ -151,18 +142,81 @@ async function callClaude(hours) {
     .trim();
 }
 
-// ---------- Blob upload ----------
+// Hourly outlook summary
+async function generateSummary(hours) {
+  const snippet = hours
+    .slice(0, SUMMARY_HOURS)
+    .map((h) => `${h.isoTime.slice(11)} — ${h.tempF}°F, wind ${h.windMph} mph, gusts ${h.gustMph} mph, ${h.condition} (${h.skiRating})`)
+    .join("\n");
 
-async function uploadBlob(payload) {
+  return claudeCall([{
+    role: "user",
+    content:
+      "You are a local expert on Lake Stevens, Washington water ski conditions. " +
+      "Given this hourly forecast for the next 12 hours, write a 2-3 sentence plain-English outlook. " +
+      "Mention the best windows for skiing and any warnings. Be direct, like a local would talk. " +
+      "Do not include preamble or markdown — just the prose summary.\n\n" +
+      `Forecast:\n${snippet}`,
+  }]);
+}
+
+// MOTD + launch quip (called once per day)
+async function generateMotd(hours) {
+  const bestRating = hours[0]?.skiRating ?? "Unknown";
+  const avgWind = round1(hours.slice(0, 12).reduce((s, h) => s + h.windMph, 0) / Math.min(hours.length, 12));
+  const tempRange = hours.slice(0, 12).reduce((acc, h) => {
+    acc.min = Math.min(acc.min, h.tempF);
+    acc.max = Math.max(acc.max, h.tempF);
+    return acc;
+  }, { min: 999, max: -999 });
+
+  const response = await claudeCall([{
+    role: "user",
+    content:
+      "Generate two things as JSON (no markdown, just raw JSON):\n" +
+      "1. \"motd\": A funny, witty water ski or wakeboard quote/joke of the day (1-2 sentences). Be creative and different each time.\n" +
+      "2. \"launchQuip\": A 1-sentence quip about whether it's a good idea to launch the boat today, based on these conditions: " +
+      `overall rating is ${bestRating}, avg wind ${avgWind} mph, temps ${tempRange.min}–${tempRange.max}°F. ` +
+      "Be humorous but honest.\n\n" +
+      "Respond with ONLY valid JSON like: {\"motd\": \"...\", \"launchQuip\": \"...\"}",
+  }], 200);
+
+  try {
+    return JSON.parse(response);
+  } catch {
+    // If Claude doesn't return valid JSON, try to extract it
+    const match = response.match(/\{[\s\S]*\}/);
+    if (match) return JSON.parse(match[0]);
+    return { motd: "", launchQuip: "" };
+  }
+}
+
+// ---------- Blob read/upload ----------
+
+function getBlobClient() {
   const conn = process.env.AZURE_STORAGE_CONNECTION_STRING;
   if (!conn) throw new Error("AZURE_STORAGE_CONNECTION_STRING not set");
-
-  const json = JSON.stringify(payload);
-  const svc       = BlobServiceClient.fromConnectionString(conn);
+  const svc = BlobServiceClient.fromConnectionString(conn);
   const container = svc.getContainerClient(CONTAINER);
-  await container.createIfNotExists();   // safe; first run creates it (set public access in portal)
-  const blob = container.getBlockBlobClient(BLOB_NAME);
+  return { container, blob: container.getBlockBlobClient(BLOB_NAME) };
+}
 
+async function readExistingBlob() {
+  try {
+    const { blob } = getBlobClient();
+    const response = await blob.download(0);
+    const chunks = [];
+    for await (const chunk of response.readableStreamBody) chunks.push(chunk);
+    return JSON.parse(Buffer.concat(chunks).toString("utf8"));
+  } catch {
+    return null;
+  }
+}
+
+async function uploadBlob(payload) {
+  const { container, blob } = getBlobClient();
+  await container.createIfNotExists();
+  const json = JSON.stringify(payload);
   await blob.upload(json, Buffer.byteLength(json, "utf8"), {
     blobHTTPHeaders: {
       blobContentType:  "application/json",
@@ -183,18 +237,46 @@ async function main() {
   if (!hours.length) throw new Error("No hours produced from Open-Meteo response");
   console.log(`[fetch-forecast] ${hours.length} hours, starting ${hours[0].isoTime}`);
 
+  // Read existing blob to check MOTD date
+  const existing = await readExistingBlob();
+  const today = currentPacificDate();
+
+  // Generate outlook summary (every hour)
   let summary = "";
   try {
-    summary = await callClaude(hours);
+    summary = await generateSummary(hours);
     console.log(`[fetch-forecast] summary: ${summary.slice(0, 80)}…`);
   } catch (err) {
-    // Claude failure is non-fatal — frontend hides the outlook section if empty.
-    console.warn(`[fetch-forecast] Claude failed: ${err.message}`);
+    console.warn(`[fetch-forecast] Claude summary failed: ${err.message}`);
+  }
+
+  // Generate MOTD only once per day
+  let motd = "";
+  let launchQuip = "";
+  let motdDate = today;
+
+  if (existing?.motdDate === today && existing?.motd) {
+    // Reuse today's MOTD
+    motd = existing.motd;
+    launchQuip = existing.launchQuip || "";
+    console.log(`[fetch-forecast] reusing today's MOTD`);
+  } else {
+    try {
+      const motdResult = await generateMotd(hours);
+      motd = motdResult.motd || "";
+      launchQuip = motdResult.launchQuip || "";
+      console.log(`[fetch-forecast] new MOTD: ${motd.slice(0, 60)}…`);
+    } catch (err) {
+      console.warn(`[fetch-forecast] Claude MOTD failed: ${err.message}`);
+    }
   }
 
   const payload = {
     fetchedAt: new Date().toISOString(),
     summary,
+    motd,
+    launchQuip,
+    motdDate,
     hours,
   };
 

@@ -67,6 +67,19 @@
     linear-gradient(135deg, var(--now-tint, transparent) 0%, var(--surface-card) 100%);
   padding: 24px 28px; margin-bottom: 28px;
 }
+.now__motd {
+  margin-bottom: var(--space-3); padding-bottom: 16px;
+  border-bottom: 1px solid var(--border-card);
+  text-align: center;
+}
+.now__motd-text {
+  font-style: italic; font-size: 15px; line-height: 1.6;
+  color: var(--text-body); margin: 0 0 8px;
+}
+.now__motd-quip {
+  font-family: var(--font-ui); font-size: 13px; font-weight: 600;
+  color: var(--text-dim); margin: 0;
+}
 .now__top {
   display: flex; justify-content: space-between; align-items: flex-start;
   flex-wrap: wrap; gap: var(--space-2);
@@ -105,6 +118,9 @@
 .now__outlook-text {
   font-size: 14px; line-height: 1.7; color: var(--text-body);
 }
+.now__outlook-text--muted {
+  color: var(--text-fade); font-style: italic; font-size: 13px;
+}
 
 /* ---------- DayTabs ---------- */
 .day-tabs {
@@ -125,7 +141,7 @@
 /* ---------- HourRow list ---------- */
 .hours { display: flex; flex-direction: column; gap: 6px; }
 .hour {
-  display: grid; grid-template-columns: 76px 1fr auto auto;
+  display: grid; grid-template-columns: 76px 40px 1fr auto auto;
   align-items: center; gap: var(--space-2);
   padding: 11px 16px;
   border-radius: var(--radius-row);
@@ -143,6 +159,10 @@
   font-family: var(--font-ui); font-size: 13px; color: var(--text-faint-2);
 }
 .hour--current .hour__time { color: #7acce0; font-weight: 700; }
+.hour__temp {
+  font-family: var(--font-ui); font-size: 13px; color: var(--text-muted);
+  font-weight: 600;
+}
 .hour__rating {
   display: flex; align-items: center; gap: 8px;
   font-family: var(--font-ui); font-size: 13px; font-weight: 600;
