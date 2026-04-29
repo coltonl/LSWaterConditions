@@ -67,18 +67,23 @@
     linear-gradient(135deg, var(--now-tint, transparent) 0%, var(--surface-card) 100%);
   padding: 24px 28px; margin-bottom: 28px;
 }
-.now__motd {
+.now__pro-quip {
   margin-top: var(--space-3); padding-top: 16px;
   border-top: 1px solid var(--border-card);
-  text-align: center;
 }
-.now__motd-text {
+.now__pro-header {
+  font-size: 12px; color: var(--text-dim); margin-bottom: 8px;
+  line-height: 1.5;
+}
+.now__pro-name {
+  font-weight: 700; color: var(--text-muted);
+}
+.now__pro-accomplishment {
+  font-style: italic;
+}
+.now__pro-quote {
   font-style: italic; font-size: 15px; line-height: 1.6;
-  color: var(--text-body); margin: 0 0 8px;
-}
-.now__motd-quip {
-  font-family: var(--font-ui); font-size: 13px; font-weight: 600;
-  color: var(--text-dim); margin: 0;
+  color: var(--text-body); margin: 0;
 }
 .now__top {
   display: flex; justify-content: space-between; align-items: flex-start;

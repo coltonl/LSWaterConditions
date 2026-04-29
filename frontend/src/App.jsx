@@ -59,7 +59,7 @@ export default function App() {
       <div className="app__inner">
         <header className="header">
           <div className="header__eyebrow">Lake Stevens, WA</div>
-          <h1 className="header__title">Ski Conditions</h1>
+          <h1 className="header__title">Should I Launch the Boat?</h1>
           <p className="header__sub">Hourly wind & forecast</p>
         </header>
 
@@ -85,7 +85,8 @@ export default function App() {
               hour={currentHour}
               summary={data.summary}
               fetchedAt={data.fetchedAt}
-              motd={data.motd}
+              proName={data.proName}
+              proAccomplishment={data.proAccomplishment}
               launchQuip={data.launchQuip}
               summaryTimeframe={data.summaryTimeframe}
               sunrise={data.sunrise}

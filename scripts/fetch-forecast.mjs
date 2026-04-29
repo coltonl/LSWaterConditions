@@ -161,8 +161,8 @@ async function generateSummary(hours, timeframeLabel) {
   }]);
 }
 
-// MOTD + launch quip (called once per day)
-async function generateMotd(hours) {
+// Pro skier launch quip (called once per day)
+async function generateProQuip(hours) {
   const bestRating = hours[0]?.skiRating ?? "Unknown";
   const avgWind = round1(hours.slice(0, 12).reduce((s, h) => s + h.windMph, 0) / Math.min(hours.length, 12));
   const tempRange = hours.slice(0, 12).reduce((acc, h) => {
@@ -174,21 +174,21 @@ async function generateMotd(hours) {
   const response = await claudeCall([{
     role: "user",
     content:
-      "Generate two things as JSON (no markdown, just raw JSON):\n" +
-      "1. \"motd\": A funny, witty water ski or wakeboard quote/joke of the day (1-2 sentences). Be creative and different each time.\n" +
-      "2. \"launchQuip\": A 1-sentence quip about whether it's a good idea to launch the boat today, based on these conditions: " +
+      "Generate JSON (no markdown, just raw JSON) with these fields:\n" +
+      "1. \"proName\": The full name of a famous professional water skier or wakeboarder (real person, pick a different one each time — e.g. Andy Mapple, Freddy Krueger, Dallas Friday, Shaun Murray, Parks Bonifay, Darin Shapiro, etc.)\n" +
+      "2. \"proAccomplishment\": One sentence about their most notable professional accomplishment.\n" +
+      "3. \"launchQuip\": A 1-2 sentence recommendation about whether to launch the boat today, written in the voice/personality of that pro skier. Based on these conditions: " +
       `overall rating is ${bestRating}, avg wind ${avgWind} mph, temps ${tempRange.min}–${tempRange.max}°F. ` +
-      "Be humorous but honest.\n\n" +
-      "Respond with ONLY valid JSON like: {\"motd\": \"...\", \"launchQuip\": \"...\"}",
-  }], 200);
+      "Be colorful and in-character but honest about the conditions.\n\n" +
+      "Respond with ONLY valid JSON like: {\"proName\": \"...\", \"proAccomplishment\": \"...\", \"launchQuip\": \"...\"}",
+  }], 250);
 
   try {
     return JSON.parse(response);
   } catch {
-    // If Claude doesn't return valid JSON, try to extract it
     const match = response.match(/\{[\s\S]*\}/);
     if (match) return JSON.parse(match[0]);
-    return { motd: "", launchQuip: "" };
+    return { proName: "", proAccomplishment: "", launchQuip: "" };
   }
 }
 
@@ -342,23 +342,26 @@ async function main() {
     console.warn(`[fetch-forecast] Claude summary failed: ${err.message}`);
   }
 
-  // Generate MOTD only once per day
-  let motd = "";
+  // Generate pro skier quip only once per day
+  let proName = "";
+  let proAccomplishment = "";
   let launchQuip = "";
-  let motdDate = today;
+  let quipDate = today;
 
-  if (existing?.motdDate === today && existing?.motd) {
-    motd = existing.motd;
+  if (existing?.quipDate === today && existing?.launchQuip) {
+    proName = existing.proName || "";
+    proAccomplishment = existing.proAccomplishment || "";
     launchQuip = existing.launchQuip || "";
-    console.log(`[fetch-forecast] reusing today's MOTD`);
+    console.log(`[fetch-forecast] reusing today's pro quip`);
   } else {
     try {
-      const motdResult = await generateMotd(hours);
-      motd = motdResult.motd || "";
-      launchQuip = motdResult.launchQuip || "";
-      console.log(`[fetch-forecast] new MOTD: ${motd.slice(0, 60)}…`);
+      const quipResult = await generateProQuip(hours);
+      proName = quipResult.proName || "";
+      proAccomplishment = quipResult.proAccomplishment || "";
+      launchQuip = quipResult.launchQuip || "";
+      console.log(`[fetch-forecast] new pro quip from ${proName}`);
     } catch (err) {
-      console.warn(`[fetch-forecast] Claude MOTD failed: ${err.message}`);
+      console.warn(`[fetch-forecast] Claude pro quip failed: ${err.message}`);
     }
   }
 
@@ -368,9 +371,10 @@ async function main() {
     summaryTimeframe,
     sunrise: daylight.sunrise,
     sunset: daylight.sunset,
-    motd,
+    proName,
+    proAccomplishment,
     launchQuip,
-    motdDate,
+    quipDate,
     hours,
   };
 
