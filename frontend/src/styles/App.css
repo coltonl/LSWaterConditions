@@ -72,14 +72,10 @@
   border-top: 1px solid var(--border-card);
 }
 .now__pro-header {
-  font-size: 12px; color: var(--text-dim); margin-bottom: 8px;
-  line-height: 1.5;
+  font-size: 13px; margin-bottom: 6px;
 }
 .now__pro-name {
   font-weight: 700; color: var(--text-muted);
-}
-.now__pro-accomplishment {
-  font-style: italic;
 }
 .now__pro-quote {
   font-style: italic; font-size: 15px; line-height: 1.6;

@@ -86,7 +86,6 @@ export default function App() {
               summary={data.summary}
               fetchedAt={data.fetchedAt}
               proName={data.proName}
-              proAccomplishment={data.proAccomplishment}
               launchQuip={data.launchQuip}
               summaryTimeframe={data.summaryTimeframe}
               sunrise={data.sunrise}

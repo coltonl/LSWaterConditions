@@ -175,20 +175,21 @@ async function generateProQuip(hours) {
     role: "user",
     content:
       "Generate JSON (no markdown, just raw JSON) with these fields:\n" +
-      "1. \"proName\": The full name of a famous professional water skier or wakeboarder (real person, pick a different one each time — e.g. Andy Mapple, Freddy Krueger, Dallas Friday, Shaun Murray, Parks Bonifay, Darin Shapiro, etc.)\n" +
-      "2. \"proAccomplishment\": One sentence about their most notable professional accomplishment.\n" +
-      "3. \"launchQuip\": A 1-2 sentence recommendation about whether to launch the boat today, written in the voice/personality of that pro skier. Based on these conditions: " +
-      `overall rating is ${bestRating}, avg wind ${avgWind} mph, temps ${tempRange.min}–${tempRange.max}°F. ` +
-      "Be colorful and in-character but honest about the conditions.\n\n" +
-      "Respond with ONLY valid JSON like: {\"proName\": \"...\", \"proAccomplishment\": \"...\", \"launchQuip\": \"...\"}",
-  }], 250);
+      "1. \"proName\": The full name of a famous professional water skier or wakeboarder (real person, pick a different one each time — e.g. Andy Mapple, Freddy Krueger, Dallas Friday, Shaun Murray, Parks Bonifay, Darin Shapiro, Regina Jaquess, Nate Smith, Whitney McClintock, etc.)\n" +
+      "2. \"launchQuip\": A 1-2 sentence recommendation about whether to launch the boat, written as if this pro is your personal caddy/advisor. " +
+      "Tone: dry, clever, confident wit. Think country club caddy who's seen it all. NO puns, NO dad jokes, NO exclamation marks, NO forced enthusiasm. " +
+      "The audience owns boats and appreciates sharp, understated humor. Be genuinely funny through observation and specificity. " +
+      "Based on conditions: " +
+      `overall rating is ${bestRating}, avg wind ${avgWind} mph, temps ${tempRange.min}–${tempRange.max}°F.\n\n` +
+      "Respond with ONLY valid JSON like: {\"proName\": \"...\", \"launchQuip\": \"...\"}",
+  }], 200);
 
   try {
     return JSON.parse(response);
   } catch {
     const match = response.match(/\{[\s\S]*\}/);
     if (match) return JSON.parse(match[0]);
-    return { proName: "", proAccomplishment: "", launchQuip: "" };
+    return { proName: "", launchQuip: "" };
   }
 }
 
@@ -344,20 +345,17 @@ async function main() {
 
   // Generate pro skier quip only once per day
   let proName = "";
-  let proAccomplishment = "";
   let launchQuip = "";
   let quipDate = today;
 
   if (existing?.quipDate === today && existing?.launchQuip) {
     proName = existing.proName || "";
-    proAccomplishment = existing.proAccomplishment || "";
     launchQuip = existing.launchQuip || "";
     console.log(`[fetch-forecast] reusing today's pro quip`);
   } else {
     try {
       const quipResult = await generateProQuip(hours);
       proName = quipResult.proName || "";
-      proAccomplishment = quipResult.proAccomplishment || "";
       launchQuip = quipResult.launchQuip || "";
       console.log(`[fetch-forecast] new pro quip from ${proName}`);
     } catch (err) {
@@ -372,7 +370,6 @@ async function main() {
     sunrise: daylight.sunrise,
     sunset: daylight.sunset,
     proName,
-    proAccomplishment,
     launchQuip,
     quipDate,
     hours,

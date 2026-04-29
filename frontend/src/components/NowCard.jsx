@@ -2,7 +2,7 @@ import { ratingMeta } from "../lib/rating";
 import { formatHour, formatFetchedAt } from "../lib/time";
 import { conditionToIcon } from "../lib/weather-icons";
 
-export default function NowCard({ hour, summary, fetchedAt, proName, proAccomplishment, launchQuip, summaryTimeframe, sunrise, sunset }) {
+export default function NowCard({ hour, summary, fetchedAt, proName, launchQuip, summaryTimeframe, sunrise, sunset }) {
   if (!hour) return null;
   const meta = ratingMeta(hour.skiRating);
   const weatherIcon = conditionToIcon(hour.condition, hour.isoTime, sunrise, sunset);
@@ -60,10 +60,7 @@ export default function NowCard({ hour, summary, fetchedAt, proName, proAccompli
         <div className="now__pro-quip">
           {proName && (
             <div className="now__pro-header">
-              <span className="now__pro-name">{proName}</span>
-              {proAccomplishment && (
-                <span className="now__pro-accomplishment"> — {proAccomplishment}</span>
-              )}
+              <span className="now__pro-name">{proName} says:</span>
             </div>
           )}
           <p className="now__pro-quote">"{launchQuip}"</p>
