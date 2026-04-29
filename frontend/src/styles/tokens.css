@@ -9,9 +9,6 @@
   --surface-row:     rgba(255, 255, 255, 0.03);
   --surface-row-hi:  rgba(91, 168, 196, 0.12);
   --surface-row-sel: rgba(255, 255, 255, 0.05);
-  --surface-hero:    rgba(8, 26, 39, 0.9);
-  --surface-elevated: rgba(12, 38, 55, 0.78);
-  --surface-subtle:  rgba(255, 255, 255, 0.055);
   --border-card:     rgba(91, 168, 196, 0.15);
   --border-current:  rgba(91, 168, 196, 0.25);
 
@@ -23,7 +20,6 @@
   --text-faint:      #5ba8c4;
   --text-faint-2:    #6a9ab0;
   --text-fade:       #4a7a8a;
-  --text-footer:     #6094a8;
 
   /* rating colors */
   --rating-excellent: #33ddaa;
@@ -36,13 +32,6 @@
   --error-bg:        rgba(255, 50, 50, 0.08);
   --error-fg:        #ff9988;
   --button-bg:       #1a4a6a;
-  --button-bg-active: #1a5a7a;
-
-  /* accent */
-  --accent-sunrise:  #ffb86b;
-  --accent-lake-glow: #7acce0;
-  --accent-warning:  #ff9966;
-  --focus-ring:      #ffcf8a;
 
   /* spacing & radius */
   --space-1: 6px;
@@ -52,20 +41,6 @@
   --radius-card: 16px;
   --radius-row:  10px;
   --radius-pill: 8px;
-  --touch-target: 44px;
-  --container-max: 840px;
-
-  /* typography scale */
-  --text-xs: 11px;
-  --text-sm: 13px;
-  --text-md: 15px;
-  --text-lg: 18px;
-  --text-xl: 24px;
-  --text-hero: clamp(42px, 12vw, 76px);
-
-  /* shadows */
-  --shadow-card: 0 22px 80px rgba(0, 0, 0, 0.26);
-  --shadow-glow: 0 0 36px rgba(122, 204, 224, 0.18);
 
   /* typography */
   --font-display: "Georgia", "Palatino", serif;
