@@ -5,6 +5,7 @@ import NowCard from "./components/NowCard";
 import DayTabs from "./components/DayTabs";
 import HourRow from "./components/HourRow";
 import Legend from "./components/Legend";
+import WeeklyForecast from "./components/WeeklyForecast";
 
 export default function App() {
   const [data, setData] = useState(null);
@@ -46,6 +47,12 @@ export default function App() {
 
   // Filter hours by active tab
   const visibleHours = hours.filter((h) => h.dayLabel === activeDay);
+  const bestVisibleHour = visibleHours
+    .filter((h) => !(activeDay === "Today" && h.isPast))
+    .reduce((best, hour) => {
+      if (!best) return hour;
+      return ratingMeta(hour.skiRating).rank > ratingMeta(best.skiRating).rank ? hour : best;
+    }, null);
 
   // Current hour for the NowCard (first non-past hour, or the current-flagged one)
   const currentHour = hours.find((h) => h.isCurrent) ?? hours.find((h) => !h.isPast) ?? hours[0];
@@ -58,9 +65,9 @@ export default function App() {
       <div className="app__noise" />
       <div className="app__inner">
         <header className="header">
-          <div className="header__eyebrow">Lake Stevens, WA</div>
+          <div className="header__eyebrow">Lake Stevens Launch Desk</div>
           <h1 className="header__title">Should I Launch the Boat?</h1>
-          <p className="header__sub">Hourly wind & forecast</p>
+          <p className="header__sub">Wind, water, and bad ideas — hourly.</p>
         </header>
 
         {loading && (
@@ -80,30 +87,50 @@ export default function App() {
         )}
 
         {!loading && !error && data && (
-          <>
+          <main className="app__main">
             <NowCard
               hour={currentHour}
+              outlook={data.outlook}
               summary={data.summary}
               fetchedAt={data.fetchedAt}
+              expertOpinion={data.expertOpinion}
               proName={data.proName}
               launchQuip={data.launchQuip}
               summaryTimeframe={data.summaryTimeframe}
               sunrise={data.sunrise}
               sunset={data.sunset}
+              waterTemp={data.waterTemp}
             />
 
-            <DayTabs days={days} active={activeDay} onChange={setDayFilter} />
+            <WeeklyForecast
+              dailyForecast={data.dailyForecast}
+              weeklySummary={data.weeklySummary}
+            />
 
-            <div className="hours">
-              {visibleHours.map((h) => (
-                <HourRow
-                  key={h.isoTime}
-                  hour={h}
-                  isCurrent={isToday && h.isCurrent}
-                  isPast={isToday && h.isPast}
-                />
-              ))}
-            </div>
+            <section className="forecast" aria-labelledby="forecast-title">
+              <div className="section-heading">
+                <div>
+                  <div className="section-heading__eyebrow">Near term</div>
+                  <h2 id="forecast-title" className="section-heading__title">Hourly launch windows</h2>
+                </div>
+              </div>
+
+              <DayTabs days={days} active={activeDay} onChange={setDayFilter} />
+
+              <ul className="hours">
+                {visibleHours.map((h) => (
+                  <HourRow
+                    key={h.isoTime}
+                    hour={h}
+                    isCurrent={isToday && h.isCurrent}
+                    isPast={isToday && h.isPast}
+                    isBest={h.isoTime === bestVisibleHour?.isoTime}
+                    sunrise={data.sunrise}
+                    sunset={data.sunset}
+                  />
+                ))}
+              </ul>
+            </section>
 
             <Legend />
 
@@ -115,7 +142,7 @@ export default function App() {
                 </button>
               </div>
             </footer>
-          </>
+          </main>
         )}
       </div>
     </div>

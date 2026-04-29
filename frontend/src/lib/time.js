@@ -17,6 +17,13 @@ export function formatHour(isoStr) {
   return `${h % 12 || 12}:00 ${ampm}`;
 }
 
+export function formatCompactHour(isoStr) {
+  const d = parseLocalISO(isoStr);
+  const h = d.getHours();
+  const ampm = h >= 12 ? "p" : "a";
+  return `${h % 12 || 12}${ampm}`;
+}
+
 export function dayLabel(isoStr) {
   const d = parseLocalISO(isoStr);
   const today = new Date();
@@ -35,4 +42,11 @@ export function formatFetchedAt(fetchedAtIso) {
   return d.toLocaleTimeString("en-US", {
     timeZone: TZ, hour: "2-digit", minute: "2-digit",
   });
+}
+
+export function formatShortDate(dateStr) {
+  if (!dateStr) return "";
+  const d = new Date(`${dateStr}T12:00:00`);
+  if (Number.isNaN(d.getTime())) return dateStr;
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
