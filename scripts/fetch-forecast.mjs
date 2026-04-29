@@ -22,6 +22,7 @@ async function fetchOpenMeteo() {
   url.searchParams.set("latitude",  String(LAT));
   url.searchParams.set("longitude", String(LON));
   url.searchParams.set("hourly", "wind_speed_10m,wind_gusts_10m,precipitation,weather_code,temperature_2m,apparent_temperature,relative_humidity_2m");
+  url.searchParams.set("daily", "sunrise,sunset");
   url.searchParams.set("wind_speed_unit", "mph");
   url.searchParams.set("temperature_unit", "fahrenheit");
   url.searchParams.set("forecast_days", "3");
@@ -142,10 +143,9 @@ async function claudeCall(messages, maxTokens = 300) {
     .trim();
 }
 
-// Hourly outlook summary
-async function generateSummary(hours) {
+// Hourly outlook summary — only for daylight (skiable) hours
+async function generateSummary(hours, timeframeLabel) {
   const snippet = hours
-    .slice(0, SUMMARY_HOURS)
     .map((h) => `${h.isoTime.slice(11)} — ${h.tempF}°F, wind ${h.windMph} mph, gusts ${h.gustMph} mph, ${h.condition} (${h.skiRating})`)
     .join("\n");
 
@@ -153,8 +153,9 @@ async function generateSummary(hours) {
     role: "user",
     content:
       "You are a local expert on Lake Stevens, Washington water ski conditions. " +
-      "Given this hourly forecast for the next 12 hours, write a 2-3 sentence plain-English outlook. " +
-      "Mention the best windows for skiing and any warnings. Be direct, like a local would talk. " +
+      `Given this forecast for skiable daylight hours (${timeframeLabel}), write a 2-3 sentence plain-English outlook. ` +
+      "Mention the best windows for skiing and any warnings. Only recommend times within this daylight window. " +
+      "Be direct, like a local would talk. " +
       "Do not include preamble or markdown — just the prose summary.\n\n" +
       `Forecast:\n${snippet}`,
   }]);
@@ -189,6 +190,86 @@ async function generateMotd(hours) {
     if (match) return JSON.parse(match[0]);
     return { motd: "", launchQuip: "" };
   }
+}
+
+// ---------- Daylight helpers ----------
+
+function getSunTimes(om) {
+  // Open-Meteo daily returns arrays of ISO strings like "2026-04-29T05:45"
+  const { sunrise, sunset } = om.daily;
+  const dates = om.daily.time; // ["2026-04-29", "2026-04-30", ...]
+  const result = {};
+  for (let i = 0; i < dates.length; i++) {
+    result[dates[i]] = { sunrise: sunrise[i], sunset: sunset[i] };
+  }
+  return result;
+}
+
+// Filter hours to only daylight (dawn-1h to dusk+1h). If current time is after
+// today's dusk+1h, return tomorrow's daylight hours instead.
+function getDaylightHours(hours, sunTimes) {
+  const now = currentPacificHour();
+  const today = now.slice(0, 10);
+  const todaySun = sunTimes[today];
+
+  if (todaySun) {
+    const dawnHour = parseInt(todaySun.sunrise.slice(11, 13), 10) - 1;
+    const duskHour = parseInt(todaySun.sunset.slice(11, 13), 10) + 1;
+    const currentHr = parseInt(now.slice(11, 13), 10);
+
+    // If it's still within today's usable window, filter today's hours
+    if (currentHr <= duskHour) {
+      const filtered = hours.filter((h) => {
+        const date = h.isoTime.slice(0, 10);
+        const hr = parseInt(h.isoTime.slice(11, 13), 10);
+        if (date !== today) return false;
+        return hr >= Math.max(dawnHour, currentHr) && hr <= duskHour;
+      });
+      if (filtered.length > 0) {
+        return {
+          hours: filtered,
+          isNextDay: false,
+          sunrise: todaySun.sunrise,
+          sunset: todaySun.sunset,
+        };
+      }
+    }
+  }
+
+  // After dark or no today hours left — use tomorrow
+  const tomorrow = new Date(new Date(today + "T12:00:00").getTime() + 86400000)
+    .toISOString().slice(0, 10);
+  const tmrwSun = sunTimes[tomorrow];
+  if (!tmrwSun) {
+    // Fallback: return first 12 hours
+    return { hours: hours.slice(0, SUMMARY_HOURS), isNextDay: false,
+             sunrise: todaySun?.sunrise ?? "", sunset: todaySun?.sunset ?? "" };
+  }
+
+  const dawnHour = parseInt(tmrwSun.sunrise.slice(11, 13), 10) - 1;
+  const duskHour = parseInt(tmrwSun.sunset.slice(11, 13), 10) + 1;
+
+  const filtered = hours.filter((h) => {
+    const date = h.isoTime.slice(0, 10);
+    const hr = parseInt(h.isoTime.slice(11, 13), 10);
+    if (date !== tomorrow) return false;
+    return hr >= dawnHour && hr <= duskHour;
+  });
+
+  return {
+    hours: filtered.length > 0 ? filtered : hours.slice(0, SUMMARY_HOURS),
+    isNextDay: true,
+    sunrise: tmrwSun.sunrise,
+    sunset: tmrwSun.sunset,
+  };
+}
+
+function formatTimeLabel(isoTime) {
+  const hr = parseInt(isoTime.slice(11, 13), 10);
+  const min = isoTime.slice(14, 16);
+  const suffix = hr >= 12 ? "PM" : "AM";
+  const h12 = hr === 0 ? 12 : hr > 12 ? hr - 12 : hr;
+  return `${h12}:${min} ${suffix}`;
 }
 
 // ---------- Blob read/upload ----------
@@ -237,14 +318,25 @@ async function main() {
   if (!hours.length) throw new Error("No hours produced from Open-Meteo response");
   console.log(`[fetch-forecast] ${hours.length} hours, starting ${hours[0].isoTime}`);
 
+  // Extract sunrise/sunset data
+  const sunTimes = getSunTimes(om);
+  const daylight = getDaylightHours(hours, sunTimes);
+  console.log(`[fetch-forecast] daylight hours: ${daylight.hours.length}, nextDay: ${daylight.isNextDay}`);
+
+  // Build timeframe label
+  const timeframePrefix = daylight.isNextDay ? "Tomorrow" : "Today";
+  const sunriseLabel = formatTimeLabel(daylight.sunrise);
+  const sunsetLabel = formatTimeLabel(daylight.sunset);
+  const summaryTimeframe = `${timeframePrefix} · ${sunriseLabel} – ${sunsetLabel}`;
+
   // Read existing blob to check MOTD date
   const existing = await readExistingBlob();
   const today = currentPacificDate();
 
-  // Generate outlook summary (every hour)
+  // Generate outlook summary (every hour) — only for daylight hours
   let summary = "";
   try {
-    summary = await generateSummary(hours);
+    summary = await generateSummary(daylight.hours, summaryTimeframe);
     console.log(`[fetch-forecast] summary: ${summary.slice(0, 80)}…`);
   } catch (err) {
     console.warn(`[fetch-forecast] Claude summary failed: ${err.message}`);
@@ -256,7 +348,6 @@ async function main() {
   let motdDate = today;
 
   if (existing?.motdDate === today && existing?.motd) {
-    // Reuse today's MOTD
     motd = existing.motd;
     launchQuip = existing.launchQuip || "";
     console.log(`[fetch-forecast] reusing today's MOTD`);
@@ -274,6 +365,9 @@ async function main() {
   const payload = {
     fetchedAt: new Date().toISOString(),
     summary,
+    summaryTimeframe,
+    sunrise: daylight.sunrise,
+    sunset: daylight.sunset,
     motd,
     launchQuip,
     motdDate,

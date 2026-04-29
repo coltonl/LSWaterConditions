@@ -87,6 +87,9 @@ export default function App() {
               fetchedAt={data.fetchedAt}
               motd={data.motd}
               launchQuip={data.launchQuip}
+              summaryTimeframe={data.summaryTimeframe}
+              sunrise={data.sunrise}
+              sunset={data.sunset}
             />
 
             <DayTabs days={days} active={activeDay} onChange={setDayFilter} />

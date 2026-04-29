@@ -1,26 +1,21 @@
 import { ratingMeta } from "../lib/rating";
 import { formatHour, formatFetchedAt } from "../lib/time";
+import { conditionToIcon } from "../lib/weather-icons";
 
-export default function NowCard({ hour, summary, fetchedAt, motd, launchQuip }) {
+export default function NowCard({ hour, summary, fetchedAt, motd, launchQuip, summaryTimeframe, sunrise, sunset }) {
   if (!hour) return null;
   const meta = ratingMeta(hour.skiRating);
+  const weatherIcon = conditionToIcon(hour.condition, hour.isoTime, sunrise, sunset);
 
   return (
     <section
       className="now"
       style={{ "--now-tint": `${meta.color}11`, "--rating": meta.color }}
     >
-      {(motd || launchQuip) && (
-        <div className="now__motd">
-          {motd && <p className="now__motd-text">"{motd}"</p>}
-          {launchQuip && <p className="now__motd-quip">{launchQuip}</p>}
-        </div>
-      )}
-
       <div className="now__top">
         <div>
           <div className="now__eyebrow">Right Now</div>
-          <div className="now__icon">{meta.icon}</div>
+          <div className="now__weather-icon">{weatherIcon}</div>
           <div className="now__rating" style={{ color: meta.color }}>
             {hour.skiRating}
           </div>
@@ -48,7 +43,9 @@ export default function NowCard({ hour, summary, fetchedAt, motd, launchQuip }) 
 
       {summary ? (
         <div className="now__outlook">
-          <div className="now__outlook-eyebrow">Outlook</div>
+          <div className="now__outlook-eyebrow">
+            Outlook{summaryTimeframe ? ` · ${summaryTimeframe}` : ""}
+          </div>
           <p className="now__outlook-text">{summary}</p>
         </div>
       ) : (
@@ -56,6 +53,13 @@ export default function NowCard({ hour, summary, fetchedAt, motd, launchQuip }) 
           <p className="now__outlook-text now__outlook-text--muted">
             AI outlook temporarily unavailable
           </p>
+        </div>
+      )}
+
+      {(motd || launchQuip) && (
+        <div className="now__motd">
+          {motd && <p className="now__motd-text">"{motd}"</p>}
+          {launchQuip && <p className="now__motd-quip">{launchQuip}</p>}
         </div>
       )}
 

@@ -68,8 +68,8 @@
   padding: 24px 28px; margin-bottom: 28px;
 }
 .now__motd {
-  margin-bottom: var(--space-3); padding-bottom: 16px;
-  border-bottom: 1px solid var(--border-card);
+  margin-top: var(--space-3); padding-top: 16px;
+  border-top: 1px solid var(--border-card);
   text-align: center;
 }
 .now__motd-text {
@@ -90,6 +90,7 @@
   color: var(--text-faint); margin-bottom: var(--space-1);
 }
 .now__icon { font-size: 44px; margin-bottom: 4px; }
+.now__weather-icon { font-size: 56px; margin-bottom: 8px; line-height: 1; }
 .now__rating {
   font-family: var(--font-ui); font-size: 26px; font-weight: 600;
   color: var(--rating, var(--text-primary));
